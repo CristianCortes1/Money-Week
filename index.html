@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12202B">
+<title>Money Week</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=DM+Sans:wght@400;500;700&family=DM+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+/* Layout: single narrow column, phone first. One screen at a time; money card stays on top while playing. */
+:root{
+  --bg:#F2F4EF; --surface:#FFFFFF; --ink:#12202B; --muted:#5B6B73; --line:#D5DCD3;
+  --accent:#F2B705; --accent-ink:#3A2C00; --money:#14785A; --bad:#C8452F; --soft:#E8EDE5;
+  --font-display:"Bricolage Grotesque","Trebuchet MS",sans-serif;
+  --font-body:"DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"DM Mono",ui-monospace,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1A1F; --surface:#17262D; --ink:#EAF1EC; --muted:#93A5A9; --line:#263840;
+    --accent:#F5C518; --accent-ink:#2A2000; --money:#3FCB9B; --bad:#FF7A63; --soft:#1E3039;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1A1F; --surface:#17262D; --ink:#EAF1EC; --muted:#93A5A9; --line:#263840;
+  --accent:#F5C518; --accent-ink:#2A2000; --money:#3FCB9B; --bad:#FF7A63; --soft:#1E3039;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.5;
+  padding-inline:16px;padding-block:calc(16px + env(safe-area-inset-top,0px)) calc(32px + env(safe-area-inset-bottom,0px));min-height:100vh}
+#app{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1,h2,h3{font-family:var(--font-display);line-height:1.1;margin:0;text-wrap:balance}
+h1{font-size:2.3rem;font-weight:800;letter-spacing:-.02em}
+h2{font-size:1.5rem;font-weight:800}
+h3{font-size:1.1rem;font-weight:600}
+p{margin:0}
+.muted{color:var(--muted)}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.label{font-size:.75rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700}
+
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{font-family:var(--font-display);font-weight:800;font-size:1.15rem;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
+.brand i{display:inline-block;width:22px;height:22px;border-radius:50%;background:var(--accent);box-shadow:inset 0 0 0 4px var(--bg),inset 0 0 0 6px var(--ink)}
+
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.btn{border:0;border-radius:10px;padding:14px 18px;font-weight:700;background:var(--ink);color:var(--bg);width:100%;transition:transform .08s}
+.btn:active{transform:scale(.98)}
+.btn.primary{background:var(--accent);color:var(--accent-ink)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--line);width:auto;padding:8px 14px;font-size:.9rem}
+.btn.line{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--ink)}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:14px}
+.field{display:flex;flex-direction:column;gap:6px}
+input[type=text]{width:100%;background:var(--bg);border:1.5px solid var(--line);border-radius:10px;padding:12px 14px}
+input[type=text]:focus{border-color:var(--ink)}
+.row{display:flex;gap:8px}
+.row input{flex:1;min-width:0}
+.row .btn{width:auto;white-space:nowrap}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:8px;background:var(--soft);border-radius:999px;padding:6px 8px 6px 14px;font-weight:500}
+.chip button{border:0;background:transparent;width:24px;height:24px;border-radius:50%;line-height:1;color:var(--muted)}
+.chip button:hover{background:var(--line)}
+
+/* Money card: banknote-style fine line texture */
+.wallet{border-radius:14px;padding:18px;color:#F4F7F2;
+  background:
+   repeating-radial-gradient(circle at 100% 0,transparent 0 9px,rgba(255,255,255,.05) 9px 10px),
+   linear-gradient(135deg,#14785A,#0E5A44);
+  display:flex;flex-direction:column;gap:12px}
+:root[data-theme="dark"] .wallet{background:repeating-radial-gradient(circle at 100% 0,transparent 0 9px,rgba(255,255,255,.05) 9px 10px),linear-gradient(135deg,#145E49,#0C4636)}
+.wallet .label{color:rgba(244,247,242,.75)}
+.amount{font-family:var(--font-mono);font-size:2.4rem;font-weight:500;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.amount.neg{color:#FFB4A5}
+.amount small{font-size:.9rem;opacity:.75;margin-left:6px}
+.mood{display:flex;align-items:center;gap:10px;font-size:.85rem}
+.mood .track{flex:1;height:8px;border-radius:99px;background:rgba(255,255,255,.2);overflow:hidden}
+.mood .fill{height:100%;background:var(--accent);border-radius:99px;transition:width .4s}
+
+.steps{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.steps span{height:6px;border-radius:99px;background:var(--line)}
+.steps span.done{background:var(--ink)}
+.steps span.now{background:var(--accent)}
+.meta{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:.85rem}
+
+.who{font-size:.9rem;color:var(--muted)}
+.event p.q{font-size:1.2rem;font-weight:500;line-height:1.35}
+.turn{display:inline-flex;align-items:center;gap:8px;font-size:.85rem;font-weight:700;background:var(--soft);padding:4px 12px;border-radius:999px;align-self:flex-start}
+
+.opts{display:flex;flex-direction:column;gap:10px}
+.opt{display:flex;justify-content:space-between;align-items:center;gap:12px;text-align:left;
+  background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:14px 16px;font-weight:500}
+.opt:hover:not(:disabled){border-color:var(--ink)}
+.opt .cost{font-family:var(--font-mono);font-size:.9rem;white-space:nowrap;color:var(--bad)}
+.opt .cost.free{color:var(--muted)}
+.opt .cost.earn{color:var(--money)}
+.opt:disabled{cursor:default}
+.opt.picked{border-color:var(--ink);background:var(--soft)}
+.opt.faded{opacity:.45}
+
+.deltas{display:flex;gap:8px;flex-wrap:wrap}
+.pill{font-family:var(--font-mono);font-size:.9rem;padding:4px 12px;border-radius:999px;background:var(--soft)}
+.pill.up{color:var(--money)} .pill.down{color:var(--bad)}
+.tip{border-left:3px solid var(--accent);padding-left:12px}
+
+.title-big{font-size:2rem;font-weight:800}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:var(--soft);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.stat b{font-family:var(--font-mono);font-weight:500;font-size:1.05rem;overflow-wrap:anywhere}
+.vocab{display:flex;flex-direction:column;gap:8px;margin:0;padding:0;list-style:none}
+.vocab li{font-size:.92rem}
+.vocab b{font-weight:700}
+
+.board{display:flex;flex-direction:column;gap:8px;margin:0;padding:0;list-style:none}
+.board li{display:grid;grid-template-columns:34px 1fr auto;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.board li.me{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.board .pos{font-family:var(--font-display);font-weight:800;font-size:1.3rem;text-align:center}
+.board li:nth-child(1) .pos{color:var(--accent)}
+.board .gn{font-weight:700;overflow-wrap:anywhere}
+.board .mem{font-size:.82rem;color:var(--muted);overflow-wrap:anywhere}
+.board .pts{font-family:var(--font-mono);font-size:1.1rem}
+.status{font-size:.82rem;color:var(--muted);display:flex;align-items:center;gap:8px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--money)}
+.dot.off{background:var(--muted)}
+.big-score{font-family:var(--font-mono);font-size:3rem;line-height:1}
+.breakdown{display:flex;flex-direction:column;gap:6px}
+.breakdown div{display:flex;justify-content:space-between;gap:12px;font-size:.95rem;border-bottom:1px dashed var(--line);padding-bottom:6px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* ============ CONFIG ============
+   Shared ranking: paste your Firebase Realtime Database URL here (see README steps).
+   Example: "https://money-week-default-rtdb.firebaseio.com"
+   Empty = ranking only works on this device. */
+const DB_URL = "";
+
+/* ============ GAME DATA ============
+   Costs and budgets are in thousands of COP. Negative cost = money earned. Mood change is -10..+20. */
+/* How many situations each group plays (1 to 5). 2 needs about 8 minutes, 1 about 4. */
+const SITUATIONS = 2;
+const SIT_TXT = SITUATIONS===1 ? "1 situation" : SITUATIONS+" situations";
+const K = 1000;
+const DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+const SCENARIOS = [
+ {id:"student", name:"The University Student", budget:150,
+  who:"You are a university student living with your family. Your weekly allowance is $150.000. You have classes, friends and a few surprises ahead.",
+  vocab:[["allowance","money you receive regularly to spend"],["discount","a lower price than usual"],["need vs. want","something you must have vs. something you would like"],["impulse buy","buying something without planning it"]],
+  events:[
+   {q:"Your 7 a.m. class is across the city. How do you get there?",tip:"Small daily savings add up. Ten rides by bus cost much less than ten rides by app.",o:[["Take the bus",7,0],["Order a ride-app car",26,6],["Wake up early and walk",0,-3]]},
+   {q:"It is lunch time and your friends invite you to a restaurant.",tip:"Eating out is fine sometimes. Choosing which days makes it a decision, not a habit.",o:[["Eat the lunch you packed",5,0],["Set menu (menú del día) with friends",16,6],["Restaurant combo with dessert",32,10]]},
+   {q:"You need to print and bind a group project.",tip:"Spending more does not always give a better result.",o:[["Print at the university",6,0],["Fancy copy shop with a nice cover",18,2],["Skip printing and present on your laptop",0,-5]]},
+   {q:"Your phone screen cracks.",tip:"A need can be solved in more than one way. Compare prices before you pay.",o:[["Buy a cheap screen protector for now",25,-2],["Official repair and a new case",70,4],["Ignore it",0,-8]]},
+   {q:"A classmate invites you to a party on Friday night.",tip:"Fun costs money, but you can set a limit before you go out.",o:[["Go and buy drinks all night",45,14],["Go, but have a drink at home first",18,9],["Stay home and watch a series",0,1]]},
+   {q:"A store has a flash sale: sneakers at 40% off.",tip:"A sale is only a saving if you were going to buy the item anyway.",o:[["Buy the sneakers",90,15],["Look around and leave",0,-2],["Walk away and keep your cash",0,0]]},
+   {q:"Sunday family lunch. Everyone brings something.",tip:"A thoughtful gift does not have to be expensive.",o:[["Bake a homemade dessert",10,6],["Buy an expensive cake",35,8],["Arrive empty-handed",0,-3]]}
+  ]},
+ {id:"barista", name:"The Part-Time Barista", budget:200,
+  who:"You work part-time at a coffee shop. After paying rent you have $200.000 until next payday. Some days, extra work is possible.",
+  vocab:[["income","money you earn"],["extra shift","additional work hours"],["lend","give money that must be returned"],["emergency fund","savings for unexpected costs"]],
+  events:[
+   {q:"Your boss offers you an extra shift on Tuesday.",tip:"Extra income helps, but your time and energy have value too.",o:[["Take the full shift",-45,-8],["Take half a shift",-22,-3],["Say no and rest",0,3]]},
+   {q:"Coffee break. The shop sells tasty pastries.",tip:"Tiny daily purchases are easy to ignore and expensive over a month.",o:[["Eat the snack you brought",3,0],["Buy a pastry every break",12,4],["Skip it and stay hungry",0,-5]]},
+   {q:"It is your friend's birthday dinner.",tip:"You can enjoy time with friends and still control the bill.",o:[["Go and split the bill equally",38,10],["Eat before, order only a drink",14,6],["Send a kind message and skip it",0,-4]]},
+   {q:"Your phone plan renews today.",tip:"Review your plans and subscriptions every few months.",o:[["Keep the premium plan",55,3],["Switch to a cheaper prepaid plan",20,0],["Use only Wi-Fi and a small data pack",8,-3]]},
+   {q:"It is payday and you feel rich. A speaker is on sale.",tip:"Pay yourself first: keeping some cash protects you later.",o:[["Buy the speaker",120,14],["Treat yourself to something small",25,7],["Keep your cash",0,0]]},
+   {q:"Your bike tire is flat and you need the bike for work.",tip:"Fixing small problems early usually costs less.",o:[["Fix it yourself with a patch",8,0],["Take it to a bike shop",20,1],["Buy a new tire and lights",45,3]]},
+   {q:"Your mom asks to borrow $50.000 until next month.",tip:"Saying no politely, or helping with less, is a financial skill.",o:[["Lend $50.000",50,3],["Lend $20.000 and explain your budget",20,2],["Say no kindly",0,-4]]}
+  ]},
+ {id:"apartment", name:"The First Apartment", budget:250,
+  who:"You just moved into a shared apartment with two roommates. You have $250.000 for food, bills and fun this week.",
+  vocab:[["bills","payments for services like electricity and internet"],["groceries","food and basic items for home"],["subscription","a service you pay for every month"],["bulk","buying or cooking a large amount at once"]],
+  events:[
+   {q:"Time for the weekly grocery shop.",tip:"Local markets are often cheaper than supermarkets and delivery apps.",o:[["Go to the local market (plaza)",60,0],["Go to the supermarket",85,3],["Order everything by delivery app",110,5]]},
+   {q:"Your roommates want to get a streaming service.",tip:"Sharing costs is one of the easiest ways to save.",o:[["Share one account three ways",10,2],["Everyone gets their own account",40,4],["Skip streaming this month",0,-3]]},
+   {q:"The electricity bill is higher than expected.",tip:"Late payments can add fees. Pay bills on time.",o:[["Pay your share in full",35,0],["Pay half and ask for more time",20,-4],["Ask roommates to help with part of it",18,1]]},
+   {q:"You are tired after work. What is for dinner?",tip:"Cooking at home is usually the cheapest dinner.",o:[["Cook pasta at home",8,1],["Buy street food",14,5],["Order from a delivery app",38,8]]},
+   {q:"Your favorite artist is playing in town on Friday.",tip:"Experiences matter. Choose the ones that matter most to you.",o:[["Front-row ticket",180,20],["Cheap seat far from the stage",70,14],["Watch the live stream for free",0,2]]},
+   {q:"You are out of laundry detergent.",tip:"Basic products often work just as well as premium ones.",o:[["Buy the basic brand",12,0],["Buy the premium brand",25,1],["Borrow some from a neighbor",0,-2]]},
+   {q:"Sunday night. Time to plan next week.",tip:"Planning ahead protects your wallet. Lotteries are fun but rarely pay off.",o:[["Cook meals in bulk for the week",15,2],["Buy a lottery ticket",20,4],["Do nothing and hope for the best",0,-2]]}
+  ]},
+ {id:"trip", name:"The Beach Trip", budget:300,
+  who:"You and your friends are planning a weekend by the sea. You saved $300.000 for everything: travel, food and fun.",
+  vocab:[["to book","to reserve a seat or a room in advance"],["souvenir","a small object that reminds you of a place"],["split the bill","each person pays an equal part"],["itinerary","a plan of where you go and when"]],
+  events:[
+   {q:"Time to book your transport to the coast.",tip:"Booking early and comparing options can save a lot of money.",o:[["Overnight bus",90,0],["Cheap flight",180,8],["Carpool with friends",60,-2]]},
+   {q:"Where will you sleep?",tip:"Where you sleep is usually a big part of any trip budget.",o:[["Shared hostel room",50,2],["Split a rental apartment",80,5],["Sleep on a friend's couch",0,-4]]},
+   {q:"You are packing. What about sunscreen?",tip:"Cheap prevention is better than an expensive problem.",o:[["Buy good sunscreen",25,1],["Buy a cheap one",12,0],["Skip it",0,-4]]},
+   {q:"A street vendor offers you a boat tour.",tip:"Free activities can be just as memorable as paid ones.",o:[["Group boat tour",70,12],["Rent a kayak",35,8],["Walk the beach for free",0,3]]},
+   {q:"Time for a seafood lunch by the beach.",tip:"Local food is often tastier and cheaper than tourist places.",o:[["Fresh fish at a beach restaurant",45,10],["Empanadas from the market",9,4],["Sandwiches from the supermarket",15,2]]},
+   {q:"You want to bring something home.",tip:"Memories do not need to be bought.",o:[["Gifts for everyone",60,6],["One small souvenir",12,3],["Just take photos",0,1]]},
+   {q:"Sunday. You need to get to the bus terminal.",tip:"Plan the trip home too, so the end does not surprise you.",o:[["Take a taxi",25,2],["Take the public bus",3,0],["Walk with your heavy bag",0,-4]]}
+  ]},
+ {id:"freelancer", name:"The Freelancer", budget:120,
+  who:"You are a freelance designer. Your next client payment arrives in a week, so you have $120.000 to cover everything until then.",
+  vocab:[["freelance","working for yourself, not for one company"],["invoice","a bill you send to a client"],["cash flow","money coming in and going out"],["deadline","the last moment to finish a task"]],
+  events:[
+   {q:"Your laptop charger dies in the middle of a project.",tip:"Match the quality of what you buy to how much you really use it.",o:[["Buy the original charger",85,1],["Buy a good generic charger",35,0],["Work at a library and borrow one",0,-4]]},
+   {q:"Where do you work today?",tip:"Your workspace affects your mood. Cheap options exist.",o:[["Coworking day pass",25,5],["Cafe, one coffee",7,3],["Stay at home",0,0]]},
+   {q:"You find old things you could sell online.",tip:"Selling things you do not use creates cash without more work.",o:[["Sell your old console",-70,-6],["Sell some clothes",-40,-3],["Do not bother",0,1]]},
+   {q:"Your software subscriptions renew today.",tip:"Cut what you do not use.",o:[["Keep all of them",48,2],["Cancel the unused one",22,0],["Switch to a free alternative",0,-2]]},
+   {q:"A friend invites you to brunch.",tip:"Social time matters. Shorter meetups cost less.",o:[["Go to brunch",28,9],["Meet for coffee only",8,5],["Decline and keep working",0,-3]]},
+   {q:"You see an online course for $150.000, 70% off.",tip:"Learning is valuable, but many free resources exist.",o:[["Buy the course",150,8],["Watch free tutorials instead",0,2],["Save the link for later",0,0]]},
+   {q:"Your tooth hurts on Sunday.",tip:"Health problems get more expensive when you ignore them.",o:[["See the dentist now",45,3],["Take pain medicine and wait",6,-6],["Ignore it",0,-10]]}
+  ]}
+];
+
+/* ============ HELPERS ============ */
+const $app = document.getElementById("app");
+const clamp = (n,a,b)=>Math.min(b,Math.max(a,n));
+const fmt = n => (n<0?"−":"")+"$"+Math.abs(Math.round(n)).toString().replace(/\B(?=(\d{3})+(?!\d))/g,".");
+const esc = s => String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const slug = s => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"") || "group";
+const scen = id => SCENARIOS.find(s=>s.id===id);
+const shuffle = a => { a=a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; };
+
+const LS = "moneyweek.v1", LB = "moneyweek.board.v1";
+function loadState(){ try{ const s=JSON.parse(localStorage.getItem(LS)); if(s&&s.phase) return s; }catch(e){} return null; }
+function saveState(){ try{ localStorage.setItem(LS, JSON.stringify(st)); }catch(e){} }
+let st = loadState() || {phase:"join", group:"", members:[]};
+if(st.phase==="board") st.phase = st.group? "join":"join";
+let view = "main";           // "main" or "board"
+let draft = {group:st.group||"", name:""};
+let boardTimer = null;
+
+/* ============ SCORING ============ */
+function scoreOf(budget, money, mood){
+  const r = money/(budget*K);
+  const s = (r>=0 ? r*500 : r*1000) + mood*5;
+  return Math.max(0, Math.round(s));
+}
+function titleOf(budget, money, mood){
+  const r = money/(budget*K);
+  if(r<0)               return ["In the Red","You spent more than you had. Debt makes next week harder."];
+  if(r>=.3 && mood>=55) return ["Balanced Budgeter","You saved money and still enjoyed your week. This is the goal."];
+  if(r>=.3)             return ["Strict Saver","You kept lots of money, but your week was a bit sad. Treat yourself sometimes."];
+  if(r>=.1 && mood>=55) return ["Smart Spender","You enjoyed the week and kept a small cushion."];
+  if(mood>=55)          return ["Living the Moment","Great week, but almost no savings left. Leave some for emergencies."];
+  return ["Tight Week","Little money and little fun. A plan would help next time."];
+}
+
+/* ============ RANKING STORAGE ============ */
+const memBoard = {};
+function withTimeout(ms){ const c=new AbortController(); setTimeout(()=>c.abort(),ms); return c.signal; }
+async function boardGet(){
+  if(DB_URL){
+    try{
+      const r = await fetch(DB_URL.replace(/\/$/,"")+"/groups.json",{signal:withTimeout(7000)});
+      if(!r.ok) throw 0;
+      const d = (await r.json())||{};
+      return {list:Object.values(d), online:true};
+    }catch(e){}
+  }
+  try{ return {list:Object.values(JSON.parse(localStorage.getItem(LB))||{}), online:false}; }
+  catch(e){ return {list:Object.values(memBoard), online:false}; }
+}
+async function boardPut(entry){
+  const id = slug(entry.name);
+  memBoard[id]=entry;
+  try{ const d=JSON.parse(localStorage.getItem(LB))||{}; d[id]=entry; localStorage.setItem(LB,JSON.stringify(d)); }catch(e){}
+  if(DB_URL){
+    try{
+      await fetch(DB_URL.replace(/\/$/,"")+"/groups/"+id+".json",{method:"PUT",body:JSON.stringify(entry),signal:withTimeout(7000)});
+    }catch(e){}
+  }
+}
+const sortBoard = l => l.slice().sort((a,b)=>b.total-a.total || a.ts-b.ts);
+
+/* ============ ACTIONS ============ */
+function resetScenario(){
+  const s = scen(st.scen[st.si]);
+  st.day = 0; st.money = s.budget*K; st.mood = 50; st.last = null;
+}
+function startRun(){
+  st.scen = shuffle(SCENARIOS.map(s=>s.id)).slice(0,SITUATIONS);
+  st.si = 0; st.scores = []; st.submitted = false;
+  resetScenario();
+  st.phase = "play";
+}
+const actions = {
+  addMember(){
+    const v = draft.name.trim();
+    if(!v || st.members.length>=8 || st.members.some(m=>m.toLowerCase()===v.toLowerCase())) return;
+    st.members.push(v.slice(0,20)); draft.name=""; saveState(); render(true);
+  },
+  removeMember(i){ st.members.splice(+i,1); saveState(); render(true); },
+  start(){
+    st.group = draft.group.trim().slice(0,28);
+    if(!st.group || !st.members.length) return;
+    startRun(); saveState(); render();
+  },
+  choose(i){
+    const s=scen(st.scen[st.si]), ev=s.events[st.day], o=ev.o[+i];
+    st.money -= o[1]*K; st.mood = clamp(st.mood+o[2],0,100);
+    st.last = {i:+i, cost:o[1], mood:o[2]};
+    st.phase="feedback"; saveState(); render();
+  },
+  next(){
+    const s=scen(st.scen[st.si]);
+    if(st.day<6){ st.day++; st.phase="play"; }
+    else{
+      const sc = scoreOf(s.budget, st.money, st.mood);
+      st.scores.push({id:s.id, money:st.money, mood:st.mood, score:sc});
+      st.phase="result";
+    }
+    st.last=null; saveState(); render();
+  },
+  nextScenario(){
+    if(st.si<SITUATIONS-1){ st.si++; resetScenario(); st.phase="play"; }
+    else{ st.phase="final"; }
+    saveState(); render();
+  },
+  playAgain(){ startRun(); saveState(); render(); },
+  newGroup(){ st = {phase:"join", group:"", members:[]}; draft={group:"",name:""}; saveState(); render(); },
+  showBoard(){ view="board"; render(); },
+  hideBoard(){ view="main"; render(); },
+};
+
+/* ============ RENDER ============ */
+function topbar(){
+  return `<div class="topbar"><div class="brand"><i></i>Money Week</div>
+  <button class="btn ghost" data-act="${view==="board"?"hideBoard":"showBoard"}">${view==="board"?"Back":"Ranking"}</button></div>`;
+}
+
+function renderJoin(){
+  const chips = st.members.map((m,i)=>`<span class="chip">${esc(m)}<button type="button" aria-label="Remove ${esc(m)}" data-act="removeMember" data-arg="${i}">×</button></span>`).join("");
+  const ok = draft.group.trim() && st.members.length;
+  return `
+  <div class="card">
+    <h1>Make your money last a week.</h1>
+    <p class="muted">Your group plays ${SIT_TXT}. Each one is 7 days of choices with Colombian pesos (COP). Spend smart, stay happy, climb the ranking.</p>
+  </div>
+  <div class="card">
+    <div class="field"><label class="label" for="groupName">Group name</label>
+      <input type="text" id="groupName" maxlength="28" placeholder="e.g. The Savers" value="${esc(draft.group)}" autocomplete="off"></div>
+    <div class="field"><label class="label" for="memberName">Group members</label>
+      <div class="row"><input type="text" id="memberName" maxlength="20" placeholder="Type a name" value="${esc(draft.name)}" autocomplete="off">
+      <button type="button" class="btn line" data-act="addMember">Add member</button></div>
+      <div class="chips" id="chips">${chips}</div>
+      ${st.members.length>=8?'<p class="muted" style="font-size:.85rem">Maximum 8 members.</p>':""}
+    </div>
+    <button class="btn primary" id="startBtn" data-act="start" ${ok?"":"disabled"}>Start the game</button>
+  </div>`;
+}
+
+function walletHtml(s){
+  const neg = st.money<0;
+  return `<div class="wallet">
+    <div class="label">Money left</div>
+    <div class="amount ${neg?"neg":""}">${fmt(st.money)}<small>COP</small></div>
+    <div class="mood"><span>Mood</span><div class="track"><div class="fill" style="width:${st.mood}%"></div></div><span class="mono">${st.mood}</span></div>
+  </div>`;
+}
+function stepsHtml(){
+  let h=""; for(let i=0;i<7;i++) h+=`<span class="${i<st.day||(i===st.day&&st.phase==="feedback")?"done":i===st.day?"now":""}"></span>`;
+  return `<div class="steps" aria-hidden="true">${h}</div>`;
+}
+function headerPlay(s){
+  return `<div class="meta"><span class="label">Situation ${st.si+1} of ${SITUATIONS}</span><span class="label">${esc(s.name)}</span></div>`;
+}
+
+function renderPlay(){
+  const s=scen(st.scen[st.si]), ev=s.events[st.day];
+  const maker = st.members[(st.day+st.si*7)%st.members.length];
+  const fb = st.phase==="feedback";
+  const opts = ev.o.map((o,i)=>{
+    const cls = o[1]<0?"earn":o[1]===0?"free":"";
+    const txt = o[1]<0?"+"+fmt(-o[1]*K):o[1]===0?"Free":"−"+fmt(o[1]*K);
+    const state = fb? (i===st.last.i?" picked":" faded"):"";
+    return `<button class="opt${state}" data-act="choose" data-arg="${i}" ${fb?"disabled":""}><span>${esc(o[0])}</span><span class="cost ${cls}">${txt}</span></button>`;
+  }).join("");
+  let feedback = "";
+  if(fb){
+    const l=st.last, last = st.day===6;
+    const mc = l.mood>0?"up":l.mood<0?"down":"";
+    feedback = `<div class="card">
+      <div class="deltas"><span class="pill ${l.cost<0?"up":l.cost>0?"down":""}">Money ${l.cost<0?"+"+fmt(-l.cost*K):l.cost===0?"±$0":"−"+fmt(l.cost*K)}</span>
+      <span class="pill ${mc}">Mood ${l.mood>0?"+":""}${l.mood}</span></div>
+      <p class="tip">${esc(ev.tip)}</p>
+      <button class="btn primary" data-act="next">${last?"See the results":"Next day"}</button></div>`;
+  }
+  return `
+  ${headerPlay(s)}
+  ${stepsHtml()}
+  ${walletHtml(s)}
+  ${st.day===0&&!fb?`<p class="who">${esc(s.who)}</p>`:""}
+  <div class="card event">
+    <div class="label">Day ${st.day+1} · ${DAYS[st.day]}</div>
+    <span class="turn">Decision maker today: ${esc(maker)}</span>
+    <p class="q">${esc(ev.q)}</p>
+    <div class="opts">${opts}</div>
+  </div>
+  ${feedback}`;
+}
+
+function renderResult(){
+  const r = st.scores[st.si], s = scen(r.id);
+  const [title, msg] = titleOf(s.budget, r.money, r.mood);
+  const vocab = s.vocab.map(v=>`<li><b>${esc(v[0])}</b>: ${esc(v[1])}</li>`).join("");
+  return `
+  <div class="meta"><span class="label">Situation ${st.si+1} of ${SITUATIONS} complete</span><span class="label">${esc(s.name)}</span></div>
+  <div class="card">
+    <div class="label">Your result</div>
+    <div class="title-big">${esc(title)}</div>
+    <p>${esc(msg)}</p>
+    <div class="stats">
+      <div class="stat"><span class="label">Money</span><b>${fmt(r.money)}</b></div>
+      <div class="stat"><span class="label">Mood</span><b>${r.mood}</b></div>
+      <div class="stat"><span class="label">Points</span><b>${r.score}</b></div>
+    </div>
+  </div>
+  <div class="card"><h3>Words from this situation</h3><ul class="vocab">${vocab}</ul></div>
+  <button class="btn primary" data-act="nextScenario">${st.si<SITUATIONS-1?"Next situation":"See final score"}</button>`;
+}
+
+function renderFinal(){
+  const total = st.scores.reduce((a,b)=>a+b.score,0);
+  const rows = st.scores.map(r=>`<div><span>${esc(scen(r.id).name)}</span><span class="mono">${r.score}</span></div>`).join("");
+  setTimeout(finalRank, 0);
+  return `
+  <div class="card">
+    <div class="label">${esc(st.group)}</div>
+    <h2>Final score</h2>
+    <div class="big-score">${total}</div>
+    <p class="muted" id="rankLine">Checking the ranking…</p>
+    <div class="breakdown">${rows}</div>
+    <p class="muted" style="font-size:.85rem">Players: ${st.members.map(esc).join(", ")}</p>
+  </div>
+  <button class="btn primary" data-act="showBoard">View the ranking</button>
+  <button class="btn line" data-act="playAgain">Play again with new situations</button>
+  <button class="btn ghost" style="align-self:center" data-act="newGroup">New group</button>`;
+}
+
+async function finalRank(){
+  const total = st.scores.reduce((a,b)=>a+b.score,0);
+  if(!st.submitted){
+    st.submitted = true; saveState();
+    const cur = (await boardGet()).list.find(e=>slug(e.name)===slug(st.group));
+    if(!cur || total>cur.total){
+      await boardPut({name:st.group, members:st.members, total, scores:st.scores.map(s=>s.score), ts:Date.now()});
+    }
+  }
+  const {list, online} = await boardGet();
+  const sorted = sortBoard(list);
+  const pos = sorted.findIndex(e=>slug(e.name)===slug(st.group))+1;
+  const el = document.getElementById("rankLine");
+  if(el) el.textContent = pos? `You are #${pos} of ${sorted.length} group${sorted.length===1?"":"s"}${online?"":" (this device only)"}.` : "Ranking not available.";
+}
+
+async function paintBoard(){
+  const {list, online} = await boardGet();
+  const el = document.getElementById("boardList"); if(!el) return;
+  const sorted = sortBoard(list);
+  const me = slug(st.group||"");
+  el.innerHTML = sorted.length? sorted.map((e,i)=>`
+    <li class="${slug(e.name)===me?"me":""}"><span class="pos">${i+1}</span>
+    <div><div class="gn">${esc(e.name)}</div><div class="mem">${(e.members||[]).map(esc).join(", ")}</div></div>
+    <span class="pts">${e.total}</span></li>`).join("")
+    : `<li style="grid-template-columns:1fr"><span class="muted">No groups yet. Finish the game to appear here.</span></li>`;
+  const stt = document.getElementById("boardStatus");
+  if(stt) stt.innerHTML = online? `<span class="dot"></span>Live ranking, updates every few seconds`
+    : `<span class="dot off"></span>${DB_URL?"Could not reach the shared ranking. Showing this device only.":"Showing this device only."}`;
+}
+function renderBoard(){
+  setTimeout(paintBoard,0);
+  clearInterval(boardTimer); boardTimer = setInterval(()=>{ if(view==="board") paintBoard(); else clearInterval(boardTimer); }, 6000);
+  return `<div class="card"><h2>Ranking</h2><p class="muted">Total points from ${SIT_TXT}. Higher is better.</p>
+  <div class="status" id="boardStatus"><span class="dot off"></span>Loading…</div></div>
+  <ol class="board" id="boardList"><li style="grid-template-columns:1fr"><span class="muted">Loading…</span></li></ol>`;
+}
+
+function render(keepFocus){
+  const active = keepFocus && document.activeElement && document.activeElement.id;
+  let body;
+  if(view==="board") body = renderBoard();
+  else if(st.phase==="join") body = renderJoin();
+  else if(st.phase==="play"||st.phase==="feedback") body = renderPlay();
+  else if(st.phase==="result") body = renderResult();
+  else body = renderFinal();
+  $app.innerHTML = topbar()+body;
+  if(active){ const e=document.getElementById(active); if(e){ e.focus(); try{ e.setSelectionRange(e.value.length,e.value.length);}catch(_){} } }
+  if(!keepFocus) window.scrollTo(0,0);
+}
+
+/* ============ EVENTS ============ */
+$app.addEventListener("click", e=>{
+  const b = e.target.closest("[data-act]"); if(!b || b.disabled) return;
+  const f = actions[b.dataset.act]; if(f) f(b.dataset.arg);
+});
+$app.addEventListener("input", e=>{
+  if(e.target.id==="groupName"){ draft.group = e.target.value; const b=document.getElementById("startBtn"); if(b) b.disabled = !(draft.group.trim() && st.members.length); }
+  if(e.target.id==="memberName"){ draft.name = e.target.value; }
+});
+$app.addEventListener("keydown", e=>{
+  if(e.key==="Enter" && e.target.id==="memberName"){ e.preventDefault(); actions.addMember(); }
+});
+
+render();
+</script>
+</body>
+</html>
