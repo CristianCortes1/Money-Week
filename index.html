@@ -103,6 +103,7 @@ input[type=text]:focus{border-color:var(--ink)}
 .opt .cost.free{color:var(--muted)}
 .opt .cost.earn{color:var(--money)}
 .opt:disabled{cursor:default}
+.opt.sel{border-color:var(--ink);background:var(--soft);box-shadow:inset 0 0 0 1px var(--ink)}
 .opt.picked{border-color:var(--ink);background:var(--soft)}
 .opt.faded{opacity:.45}
 
@@ -280,7 +281,7 @@ const sortBoard = l => l.slice().sort((a,b)=>b.total-a.total || a.ts-b.ts);
 /* ============ ACTIONS ============ */
 function resetScenario(){
   const s = scen(st.scen[st.si]);
-  st.day = 0; st.money = s.budget*K; st.mood = 50; st.last = null;
+  st.day = 0; st.money = s.budget*K; st.mood = 50; st.last = null; st.pick = null;
 }
 function startRun(){
   st.scen = shuffle(SCENARIOS.map(s=>s.id)).slice(0,SITUATIONS);
@@ -300,10 +301,12 @@ const actions = {
     if(!st.group || !st.members.length) return;
     startRun(); saveState(); render();
   },
+  pick(i){ if(st.phase!=="play") return; st.pick = +i; saveState(); render(true); },
+  confirm(){ if(st.pick==null) return; actions.choose(st.pick); },
   choose(i){
     const s=scen(st.scen[st.si]), ev=s.events[st.day], o=ev.o[+i];
     st.money -= o[1]*K; st.mood = clamp(st.mood+o[2],0,100);
-    st.last = {i:+i, cost:o[1], mood:o[2]};
+    st.last = {i:+i, cost:o[1], mood:o[2]}; st.pick = null;
     st.phase="feedback"; saveState(); render();
   },
   next(){
@@ -321,7 +324,6 @@ const actions = {
     else{ st.phase="final"; }
     saveState(); render();
   },
-  playAgain(){ startRun(); saveState(); render(); },
   newGroup(){ st = {phase:"join", group:"", members:[]}; draft={group:"",name:""}; saveState(); render(); },
   showBoard(){ view="board"; render(); },
   hideBoard(){ view="main"; render(); },
@@ -377,8 +379,8 @@ function renderPlay(){
   const opts = ev.o.map((o,i)=>{
     const cls = o[1]<0?"earn":o[1]===0?"free":"";
     const txt = o[1]<0?"+"+fmt(-o[1]*K):o[1]===0?"Free":"−"+fmt(o[1]*K);
-    const state = fb? (i===st.last.i?" picked":" faded"):"";
-    return `<button class="opt${state}" data-act="choose" data-arg="${i}" ${fb?"disabled":""}><span>${esc(o[0])}</span><span class="cost ${cls}">${txt}</span></button>`;
+    const state = fb? (i===st.last.i?" picked":" faded") : (st.pick===i?" sel":"");
+    return `<button class="opt${state}" data-act="pick" data-arg="${i}" aria-pressed="${st.pick===i}" ${fb?"disabled":""}><span>${esc(o[0])}</span><span class="cost ${cls}">${txt}</span></button>`;
   }).join("");
   let feedback = "";
   if(fb){
@@ -400,6 +402,7 @@ function renderPlay(){
     <span class="turn">Decision maker today: ${esc(maker)}</span>
     <p class="q">${esc(ev.q)}</p>
     <div class="opts">${opts}</div>
+    ${fb?"":`<button class="btn primary" data-act="confirm" ${st.pick==null?"disabled":""}>Confirm answer</button>`}
   </div>
   ${feedback}`;
 }
@@ -438,7 +441,6 @@ function renderFinal(){
     <p class="muted" style="font-size:.85rem">Players: ${st.members.map(esc).join(", ")}</p>
   </div>
   <button class="btn primary" data-act="showBoard">View the ranking</button>
-  <button class="btn line" data-act="playAgain">Play again with new situations</button>
   <button class="btn ghost" style="align-self:center" data-act="newGroup">New group</button>`;
 }
 
